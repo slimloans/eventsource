@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/slimloans/golly"
 	"github.com/slimloans/golly/errors"
-	"github.com/slimloans/golly/orm"
 	"github.com/slimloans/golly/utils"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -76,13 +75,13 @@ type Command interface{}
 
 // Call - call a command
 // TODO we will want to
-func Call(ctx golly.Context, command Command, aggregate Aggregate, metadata Metadata) (Aggregate, Event, error) {
+func Call(ctx golly.Context, db *gorm.DB, command Command, aggregate Aggregate, metadata Metadata) (Aggregate, Event, error) {
 	var event Event
 	var changes []Event
 
 	ctx.Logger().Infof("Calling command %s on %s", utils.GetTypeWithPackage(command), aggregate.GetID().String())
 
-	err := orm.DB(ctx).Transaction(func(tx *gorm.DB) error {
+	err := db.Transaction(func(tx *gorm.DB) error {
 		var newRecord = true
 
 		if aggregate.GetID() != uuid.Nil {
@@ -91,9 +90,6 @@ func Call(ctx golly.Context, command Command, aggregate Aggregate, metadata Meta
 				return errors.WrapGeneric(err)
 			}
 		}
-
-		sctx := *(&ctx)
-		orm.SetDBOnContext(sctx, orm.DB(ctx))
 
 		originalVersion := aggregate.GetVersion()
 
@@ -106,9 +102,7 @@ func Call(ctx golly.Context, command Command, aggregate Aggregate, metadata Meta
 			original = fieldVal.Interface()
 		}
 
-		// fmt.Printf("%p %p", &original, &aggregate)
-
-		if err := aggregate.HandleCommand(sctx, command); err != nil {
+		if err := aggregate.HandleCommand(ctx, tx, command); err != nil {
 			return errors.WrapGeneric(err)
 		}
 
@@ -176,27 +170,4 @@ func mergeMetaData(m1, m2 Metadata) Metadata {
 		m1[k] = v
 	}
 	return m1
-}
-
-func Diff(original, current interface{}) map[string]interface{} {
-	ret := map[string]interface{}{}
-
-	refOriginal := reflect.Indirect(reflect.ValueOf(original))
-	refCurrent := reflect.Indirect(reflect.ValueOf(current))
-
-	for i := 0; i < refOriginal.NumField(); i++ {
-		field := refOriginal.Type().Field(i)
-		if field.Name == "AggregateBase" {
-			continue
-		}
-
-		originalValue := refOriginal.FieldByName(field.Name).Interface()
-		currentValue := refCurrent.FieldByName(field.Name).Interface()
-
-		if !reflect.DeepEqual(originalValue, currentValue) {
-			ret[field.Name] = currentValue
-		}
-	}
-
-	return ret
 }

@@ -29,7 +29,7 @@ func (aggregate *TestAggregate) ApplyChange(ctx golly.Context, e Event) {
 	}
 }
 
-func (aggregate *TestAggregate) HandleCommand(ctx golly.Context, c Command) error {
+func (aggregate *TestAggregate) HandleCommand(ctx golly.Context, db *gorm.DB, c Command) error {
 	return nil
 }
 
@@ -38,7 +38,7 @@ type TestEvent struct{ Value int }
 
 func (TestCommand) Validate(Aggregate) error { return nil }
 func (c TestCommand) Perform(ctx golly.Context, db *gorm.DB, aggregate Aggregate) error {
-	aggregate.ApplyChangeHelper(ctx, aggregate, TestEvent{Value: c.Value}, true)
+	aggregate.ApplyChangeHelper(ctx, aggregate, TestEvent{c.Value}, true)
 
 	return nil
 }
@@ -47,12 +47,10 @@ func TestCall(t *testing.T) {
 	db := orm.NewInMemoryConnection(TestAggregate{}, EventDB{})
 
 	gctx := golly.NewContext(context.TODO())
-	orm.SetDBOnContext(gctx, db)
-
 	t.Run("it should call the test aggregate and save it", func(t *testing.T) {
 		aggregate := TestAggregate{}
 
-		Call(gctx, TestCommand{Value: 1}, &aggregate, Metadata{})
+		Call(gctx, db, TestCommand{Value: 1}, &aggregate, Metadata{})
 
 	})
 

@@ -9,6 +9,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/slimloans/golly"
 	"github.com/slimloans/golly/errors"
+	"github.com/slimloans/golly/orm"
+	"gorm.io/gorm"
 )
 
 type CommandDTO struct {
@@ -64,7 +66,7 @@ func (c commandController) IssueCommand(ctx golly.WebContext) {
 		return
 	}
 
-	_, agg, err := IssueCommandDTO(ctx.Context, dto)
+	_, agg, err := IssueCommandDTO(ctx.Context, orm.DB(ctx.Context), dto)
 	if err != nil {
 		golly.Render(ctx, err)
 		return
@@ -75,13 +77,13 @@ func (c commandController) IssueCommand(ctx golly.WebContext) {
 
 // IssueCommandDTO issues a command via the DTO, this is use for decoupling
 // so you can build an app in the same place
-func IssueCommandDTO(ctx golly.Context, dto CommandDTO) (Command, Aggregate, error) {
+func IssueCommandDTO(ctx golly.Context, db *gorm.DB, dto CommandDTO) (Command, Aggregate, error) {
 	cmd, aggregate, err := NewCommand(dto)
 	if err != nil {
 		return cmd, aggregate, err
 	}
 
-	agg, _, err := Call(ctx, cmd, aggregate, dto.Metadata)
+	agg, _, err := Call(ctx, db, cmd, aggregate, dto.Metadata)
 	return cmd, agg, err
 }
 
