@@ -1,11 +1,13 @@
 package eventsource
 
 import (
-	"fmt"
 	"net/http"
 	"reflect"
+	"strings"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 	"github.com/slimloans/golly"
 	"github.com/slimloans/golly/errors"
 	"github.com/slimloans/golly/utils"
@@ -38,7 +40,7 @@ var aggregateRegistry = map[string]Aggregate{}
 // RegisterCommand register a name in commandregister
 func RegisterCommand(aggregate Aggregate, cmds ...Command) {
 	// Do this here for now
-	aggregateRegistry[aggregate.GetType()] = aggregate
+	aggregateRegistry[utils.GetType(aggregate)] = aggregate
 
 	var ag interface{} = aggregate
 	if ag != nil {
@@ -50,7 +52,6 @@ func RegisterCommand(aggregate Aggregate, cmds ...Command) {
 
 	for _, cmd := range cmds {
 		tpe := utils.GetTypeWithPackage(cmd)
-
 		CommandRegister[tpe] = CommandRegistryType{cmd, ag}
 	}
 }
@@ -71,7 +72,10 @@ func FindCommand(name string) (CommandInterfaces, bool) {
 	return CommandInterfaces{}, false
 }
 
-type Command interface{}
+type Command interface {
+	Perform(golly.Context, *gorm.DB, Aggregate) error
+	Validate(Aggregate) error
+}
 
 // Call - call a command
 // TODO we will want to
@@ -79,11 +83,25 @@ func Call(ctx golly.Context, db *gorm.DB, command Command, aggregate Aggregate, 
 	var event Event
 	var changes []Event
 
-	ctx.Logger().Infof("Calling command %s on %s", utils.GetTypeWithPackage(command), aggregate.GetID().String())
+	start := time.Now()
+
+	defer func(start time.Time, aggregate Aggregate) {
+		cmd := utils.GetTypeWithPackage(command)
+		aggregateID := aggregate.GetID().String()
+
+		ctx.Logger().WithFields(logrus.Fields{
+			"command":  cmd,
+			"id":       aggregateID,
+			"duration": time.Since(start),
+		}).Infof("Calling command %s on %s", cmd, aggregateID)
+	}(start, aggregate)
+
+	if err := command.Validate(aggregate); err != nil {
+		return aggregate, Event{}, errors.WrapGeneric(err)
+	}
 
 	err := db.Transaction(func(tx *gorm.DB) error {
 		var newRecord = true
-
 		if aggregate.GetID() != uuid.Nil {
 			newRecord = false
 			if err := aggregate.Load(tx.Clauses(clause.Locking{Strength: "UPDATE"})); err != nil {
@@ -102,21 +120,8 @@ func Call(ctx golly.Context, db *gorm.DB, command Command, aggregate Aggregate, 
 			original = fieldVal.Interface()
 		}
 
-		if err := aggregate.HandleCommand(ctx, tx, command); err != nil {
+		if err := command.Perform(ctx, tx, aggregate); err != nil {
 			return errors.WrapGeneric(err)
-		}
-
-		// TODO: Refine this conflict check
-		if !newRecord {
-			cnt := int64(0)
-
-			tx.Model(aggregate).
-				Where("id = ? AND version = ?", aggregate.GetID(), originalVersion).
-				Count(&cnt)
-
-			if cnt == 0 {
-				return errors.Wrap(ErrorConflict, fmt.Errorf("cannot update record version miss match"))
-			}
 		}
 
 		changes = aggregate.Uncommited()
@@ -135,6 +140,7 @@ func Call(ctx golly.Context, db *gorm.DB, command Command, aggregate Aggregate, 
 				change.Version = uint(int(originalVersion) + (pos + 1))
 				change.AggregateID = aggregate.GetID()
 				change.Metadata = mergeMetaData(change.Metadata, metadata)
+
 				if eventDBToSave, err := change.Encode(); err != nil {
 					return errors.WrapGeneric(err)
 				} else if err = tx.Model(eventDBToSave).Create(&eventDBToSave).Error; err != nil {
@@ -149,7 +155,7 @@ func Call(ctx golly.Context, db *gorm.DB, command Command, aggregate Aggregate, 
 	})
 
 	for _, change := range changes {
-		Dispatch(ctx, change)
+		Dispatch(ctx, Topic(aggregate), change)
 	}
 
 	aggregate.ClearUncommited()
@@ -170,4 +176,8 @@ func mergeMetaData(m1, m2 Metadata) Metadata {
 		m1[k] = v
 	}
 	return m1
+}
+
+func Topic(aggregate Aggregate) string {
+	return strings.ToLower("events." + utils.GetTypeWithPackage(aggregate))
 }

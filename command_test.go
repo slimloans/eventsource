@@ -15,11 +15,14 @@ type TestAggregate struct {
 	SomeValue int
 }
 
-func (*TestAggregate) GetType() string            { return "test" }
 func (t *TestAggregate) Load(db *gorm.DB) error   { return db.Find(&t, "id = ?", t.ID).Error }
 func (t *TestAggregate) Create(db *gorm.DB) error { return db.Create(&t).Error }
 func (t *TestAggregate) Save(db *gorm.DB, original interface{}) error {
 	return db.Save(&t).Error
+}
+
+func (t *TestAggregate) Apply(ctx golly.Context, data interface{}) {
+	t.ApplyChangeHelper(ctx, t, data, true)
 }
 
 func (aggregate *TestAggregate) ApplyChange(ctx golly.Context, e Event) {
@@ -39,7 +42,6 @@ type TestEvent struct{ Value int }
 func (TestCommand) Validate(Aggregate) error { return nil }
 func (c TestCommand) Perform(ctx golly.Context, db *gorm.DB, aggregate Aggregate) error {
 	aggregate.ApplyChangeHelper(ctx, aggregate, TestEvent{c.Value}, true)
-
 	return nil
 }
 

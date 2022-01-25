@@ -81,6 +81,8 @@ type Aggregate interface {
 	// HandleCommand(slim.Context, Command) error
 	ApplyChangeHelper(golly.Context, Aggregate, interface{}, bool)
 	ApplyChange(golly.Context, Event)
+	Apply(golly.Context, interface{})
+
 	HandleCommand(golly.Context, *gorm.DB, Command) error
 
 	IncrementVersion()
@@ -92,7 +94,6 @@ type Aggregate interface {
 	SetID(uuid.UUID)
 
 	GetVersion() uint
-	GetType() string
 
 	NewRecord() bool
 

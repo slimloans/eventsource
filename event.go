@@ -83,7 +83,8 @@ func newEvent(ctx golly.Context, aggregate Aggregate, data interface{}) Event {
 	event := eventFromData(ctx, data)
 
 	event.AggregateID = aggregate.GetID()
-	event.AggregateType = aggregate.GetType()
+	event.AggregateType = utils.GetType(aggregate)
+
 	event.Version = aggregate.GetVersion() + 1
 	return event
 }
@@ -119,7 +120,7 @@ func Events(db *gorm.DB, aggregate Aggregate) ([]Event, error) {
 	ret := []Event{}
 
 	db.Where(map[string]interface{}{
-		"aggregate_type": aggregate.GetType(),
+		"aggregate_type": utils.GetType(aggregate),
 		"aggregate_id":   aggregate.GetID(),
 	}).Order("created_at DESC").Find(&events)
 
