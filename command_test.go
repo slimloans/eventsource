@@ -21,10 +21,6 @@ func (t *TestAggregate) Save(db *gorm.DB, original interface{}) error {
 	return db.Save(&t).Error
 }
 
-func (t *TestAggregate) Apply(ctx golly.Context, data interface{}) {
-	t.ApplyChangeHelper(ctx, t, data, true)
-}
-
 func (aggregate *TestAggregate) ApplyChange(ctx golly.Context, e Event) {
 	switch event := e.Data.(type) {
 	case TestEvent:
@@ -41,7 +37,7 @@ type TestEvent struct{ Value int }
 
 func (TestCommand) Validate(Aggregate) error { return nil }
 func (c TestCommand) Perform(ctx golly.Context, db *gorm.DB, aggregate Aggregate) error {
-	aggregate.ApplyChangeHelper(ctx, aggregate, TestEvent{c.Value}, true)
+	aggregate.Apply(ctx, aggregate, TestEvent{c.Value}, true)
 	return nil
 }
 

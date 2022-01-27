@@ -52,17 +52,18 @@ func (ab *AggregateBase) NewRecord() bool {
 	return ab.GetID() == uuid.Nil
 }
 
-// ApplyChangeHelper increments the version of an aggregate and apply the change itself
-func (b *AggregateBase) ApplyChangeHelper(ctx golly.Context, aggregate Aggregate, data interface{}, commit bool) {
+// Apply increments the version of an aggregate and apply the change itself
+func (ab *AggregateBase) Apply(ctx golly.Context, aggregate Aggregate, data interface{}, commit bool) {
 	event := newEvent(ctx, aggregate, data)
 
 	// increments the version in event and aggregate
-	b.IncrementVersion()
+	ab.IncrementVersion()
 
 	// apply the event itself
 	aggregate.ApplyChange(ctx, event)
+
 	if commit {
-		event.Version = b.Version
+		event.Version = ab.Version
 		if event.Data != nil {
 			event.Type = utils.GetTypeWithPackage(event.Data)
 		}
@@ -71,7 +72,7 @@ func (b *AggregateBase) ApplyChangeHelper(ctx golly.Context, aggregate Aggregate
 			event.Metadata = Metadata{}
 		}
 
-		b.changes = append(b.changes, event)
+		ab.changes = append(ab.changes, event)
 	}
 }
 
@@ -79,9 +80,8 @@ type DiffType map[string]interface{}
 
 type Aggregate interface {
 	// HandleCommand(slim.Context, Command) error
-	ApplyChangeHelper(golly.Context, Aggregate, interface{}, bool)
+	Apply(golly.Context, Aggregate, interface{}, bool)
 	ApplyChange(golly.Context, Event)
-	Apply(golly.Context, interface{})
 
 	HandleCommand(golly.Context, *gorm.DB, Command) error
 

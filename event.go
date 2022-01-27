@@ -109,7 +109,7 @@ func ReplayEvents(ctx golly.Context, aggregateID uuid.UUID, aggregateType string
 	}
 
 	for _, event := range events {
-		aggregate.ApplyChangeHelper(ctx, aggregate, event, false)
+		aggregate.Apply(ctx, aggregate, event, false)
 	}
 	return nil
 }
