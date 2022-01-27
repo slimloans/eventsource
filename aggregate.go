@@ -83,8 +83,6 @@ type Aggregate interface {
 	Apply(golly.Context, Aggregate, interface{}, bool)
 	ApplyChange(golly.Context, Event)
 
-	HandleCommand(golly.Context, *gorm.DB, Command) error
-
 	IncrementVersion()
 
 	Uncommited() []Event
