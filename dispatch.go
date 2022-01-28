@@ -1,15 +1,15 @@
 package eventsource
 
 import (
+	"context"
+
 	"github.com/slimloans/golly"
 )
 
 type ConsumerFunc func(golly.Context, Event)
 
 // Dispatch dispatch and event
-func Dispatch(ctx golly.Context, topic string, event Event) error {
-	ctx.Logger().Infof("dispatching: %#v", topic)
-
+func Dispatch(ctx context.Context, topic string, event Event) error {
 	bus.Publish(topic, ctx, event)
 	return nil
 }

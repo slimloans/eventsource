@@ -83,7 +83,7 @@ func IssueCommandDTO(ctx golly.Context, db *gorm.DB, dto CommandDTO) (Command, A
 		return cmd, aggregate, err
 	}
 
-	agg, _, err := Call(ctx, db, cmd, aggregate, dto.Metadata)
+	agg, _, err := Call(ctx.Context(), db, cmd, aggregate, dto.Metadata)
 	return cmd, agg, err
 }
 

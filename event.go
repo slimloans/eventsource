@@ -1,6 +1,7 @@
 package eventsource
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -9,7 +10,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/slimloans/go/utils"
-	"github.com/slimloans/golly"
 	"github.com/slimloans/golly/errors"
 	"github.com/slimloans/golly/orm"
 	"gorm.io/gorm"
@@ -75,8 +75,8 @@ func RegisterEvents(events ...interface{}) {
 // var randssource = rand.NewSource(time.Now().UnixNano())
 // var randssource = rand.New(randsource)
 
-func newEvent(ctx golly.Context, aggregate Aggregate, data interface{}) Event {
-	event := eventFromData(ctx, data)
+func newEvent(aggregate Aggregate, data interface{}) Event {
+	event := eventFromData(data)
 
 	event.AggregateID = aggregate.GetID()
 	event.AggregateType = utils.GetType(aggregate)
@@ -85,7 +85,7 @@ func newEvent(ctx golly.Context, aggregate Aggregate, data interface{}) Event {
 	return event
 }
 
-func eventFromData(ctx golly.Context, data interface{}) Event {
+func eventFromData(data interface{}) Event {
 	event := Event{}
 	event.ID = uuid.New()
 	event.CreatedAt = time.Now()
@@ -98,7 +98,7 @@ func eventFromData(ctx golly.Context, data interface{}) Event {
 
 // ReplayEvents allows you to reply specific events
 // on an aggregate
-func ReplayEvents(ctx golly.Context, aggregateID uuid.UUID, aggregateType string, events []Event) error {
+func ReplayEvents(ctx context.Context, aggregateID uuid.UUID, aggregateType string, events []Event) error {
 	var aggregate Aggregate
 	if ag, found := aggregateRegistry[aggregateType]; found {
 		aggregate = reflect.New(reflect.TypeOf(ag)).Interface().(Aggregate)

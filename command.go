@@ -1,14 +1,12 @@
 package eventsource
 
 import (
+	"context"
 	"net/http"
 	"reflect"
 	"strings"
-	"time"
 
 	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
-	"github.com/slimloans/golly"
 	"github.com/slimloans/golly/errors"
 	"github.com/slimloans/golly/utils"
 	"gorm.io/gorm"
@@ -73,28 +71,15 @@ func FindCommand(name string) (CommandInterfaces, bool) {
 }
 
 type Command interface {
-	Perform(golly.Context, *gorm.DB, Aggregate) error
+	Perform(context.Context, *gorm.DB, Aggregate) error
 	Validate(Aggregate) error
 }
 
 // Call - call a command
 // TODO we will want to
-func Call(ctx golly.Context, db *gorm.DB, command Command, aggregate Aggregate, metadata Metadata) (Aggregate, Event, error) {
+func Call(ctx context.Context, db *gorm.DB, command Command, aggregate Aggregate, metadata Metadata) (Aggregate, Event, error) {
 	var event Event
 	var changes []Event
-
-	start := time.Now()
-
-	defer func(start time.Time, aggregate Aggregate) {
-		cmd := utils.GetTypeWithPackage(command)
-		aggregateID := aggregate.GetID().String()
-
-		ctx.Logger().WithFields(logrus.Fields{
-			"command":  cmd,
-			"id":       aggregateID,
-			"duration": time.Since(start),
-		}).Infof("Calling command %s on %s", cmd, aggregateID)
-	}(start, aggregate)
 
 	if err := command.Validate(aggregate); err != nil {
 		return aggregate, Event{}, errors.WrapGeneric(err)
