@@ -30,8 +30,6 @@ type Event struct {
 
 	Data interface{} `json:"data"`
 
-	OrgID uint `json:"org_id"`
-
 	Metadata Metadata `json:"metadata"`
 }
 
@@ -55,8 +53,6 @@ type EventDB struct {
 
 	Version uint   `json:"version"`
 	Type    string `json:"type"`
-
-	OrgID uint `json:"org_id"`
 
 	RawData     postgres.Jsonb `json:"-" gorm:"type:jsonb;column:data"`
 	RawMetadata postgres.Jsonb `json:"-" gorm:"type:jsonb;column:metadata"`
@@ -159,7 +155,6 @@ func (event EventDB) Decode() (Event, error) {
 		Version:       event.Version,
 		Type:          event.Type,
 		Data:          marshal.Elem().Interface(),
-		OrgID:         event.OrgID,
 	}
 
 	if err := json.Unmarshal(event.RawMetadata.RawMessage, &ret.Metadata); err != nil {
@@ -178,7 +173,6 @@ func (event Event) Encode() (EventDB, error) {
 			ID:        event.ID,
 			CreatedAt: event.CreatedAt,
 		},
-		OrgID:         event.OrgID,
 		AggregateID:   event.AggregateID,
 		AggregateType: event.AggregateType,
 		Type:          event.Type,

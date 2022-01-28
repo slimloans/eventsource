@@ -37,7 +37,7 @@ type TestEvent struct{ Value int }
 
 func (TestCommand) Validate(Aggregate) error { return nil }
 func (c TestCommand) Perform(ctx golly.Context, db *gorm.DB, aggregate Aggregate) error {
-	aggregate.Apply(ctx, aggregate, TestEvent{c.Value}, true)
+	aggregate.Apply(ctx, aggregate, TestEvent(c), true)
 	return nil
 }
 
@@ -49,7 +49,5 @@ func TestCall(t *testing.T) {
 		aggregate := TestAggregate{}
 
 		Call(gctx, db, TestCommand{Value: 1}, &aggregate, Metadata{})
-
 	})
-
 }
