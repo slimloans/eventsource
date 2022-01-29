@@ -8,7 +8,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/slimloans/golly/errors"
-	"github.com/slimloans/golly/utils"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -30,44 +29,11 @@ type CommandRegistryType struct {
 	Aggregate interface{}
 }
 
-// CommandRegister holds the registery of commands
-var CommandRegister = map[string]CommandRegistryType{}
-
 var aggregateRegistry = map[string]Aggregate{}
-
-// RegisterCommand register a name in commandregister
-func RegisterCommand(aggregate Aggregate, cmds ...Command) {
-	// Do this here for now
-	aggregateRegistry[aggregate.Type()] = aggregate
-
-	var ag interface{} = aggregate
-	if ag != nil {
-		aggregateVal := reflect.ValueOf(aggregate)
-		if aggregateVal.Kind() == reflect.Ptr {
-			ag = aggregateVal.Elem().Interface()
-		}
-	}
-
-	for _, cmd := range cmds {
-		tpe := utils.GetTypeWithPackage(cmd)
-		CommandRegister[tpe] = CommandRegistryType{cmd, ag}
-	}
-}
 
 type CommandInterfaces struct {
 	Command   reflect.Type
 	Aggregate reflect.Type
-}
-
-// FindCommand a command by name
-func FindCommand(name string) (CommandInterfaces, bool) {
-	if cmd, ok := CommandRegister[name]; ok {
-		return CommandInterfaces{
-			Command:   reflect.TypeOf(cmd.Command),
-			Aggregate: reflect.TypeOf(cmd.Aggregate),
-		}, true
-	}
-	return CommandInterfaces{}, false
 }
 
 type Command interface {
