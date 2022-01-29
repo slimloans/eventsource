@@ -84,6 +84,8 @@ type Aggregate interface {
 	Apply(context.Context, Aggregate, interface{}, bool)
 	ApplyChange(context.Context, Event)
 
+	Type() string
+
 	IncrementVersion()
 
 	Uncommited() []Event

@@ -14,6 +14,7 @@ type TestAggregate struct {
 	SomeValue int
 }
 
+func (*TestAggregate) Type() string               { return "test_aggregate" }
 func (t *TestAggregate) Load(db *gorm.DB) error   { return db.Find(&t, "id = ?", t.ID).Error }
 func (t *TestAggregate) Create(db *gorm.DB) error { return db.Create(&t).Error }
 func (t *TestAggregate) Save(db *gorm.DB, original interface{}) error {

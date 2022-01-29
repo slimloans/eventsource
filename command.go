@@ -38,7 +38,7 @@ var aggregateRegistry = map[string]Aggregate{}
 // RegisterCommand register a name in commandregister
 func RegisterCommand(aggregate Aggregate, cmds ...Command) {
 	// Do this here for now
-	aggregateRegistry[utils.GetType(aggregate)] = aggregate
+	aggregateRegistry[aggregate.Type()] = aggregate
 
 	var ag interface{} = aggregate
 	if ag != nil {
@@ -164,5 +164,5 @@ func mergeMetaData(m1, m2 Metadata) Metadata {
 }
 
 func Topic(aggregate Aggregate) string {
-	return strings.ToLower("events." + utils.GetTypeWithPackage(aggregate))
+	return strings.ToLower("events." + aggregate.Type())
 }
