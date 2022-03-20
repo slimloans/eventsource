@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/slimloans/eventsource/backend"
 	"github.com/slimloans/golly/errors"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -106,7 +107,7 @@ func Call(ctx context.Context, db *gorm.DB, command Command, aggregate Aggregate
 	})
 
 	for _, change := range changes {
-		Dispatch(ctx, Topic(aggregate), change)
+		backend.Dispatch(ctx, Topic(aggregate), change)
 	}
 
 	aggregate.ClearUncommited()
