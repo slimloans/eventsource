@@ -1,14 +1,14 @@
 package eventsource
 
 import (
-	"context"
 	"net/http"
 	"reflect"
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/slimloans/eventsource/backend"
+	"github.com/slimloans/golly"
 	"github.com/slimloans/golly/errors"
+	"github.com/slimloans/golly/plugins/redis"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -38,13 +38,13 @@ type CommandInterfaces struct {
 }
 
 type Command interface {
-	Perform(context.Context, *gorm.DB, Aggregate) error
+	Perform(golly.Context, *gorm.DB, Aggregate) error
 	Validate(Aggregate) error
 }
 
 // Call - call a command
 // TODO we will want to
-func Call(ctx context.Context, db *gorm.DB, command Command, aggregate Aggregate, metadata Metadata) (Aggregate, Event, error) {
+func Call(ctx golly.Context, db *gorm.DB, command Command, aggregate Aggregate, metadata Metadata) (Aggregate, Event, error) {
 	var event Event
 	var changes []Event
 
@@ -107,7 +107,7 @@ func Call(ctx context.Context, db *gorm.DB, command Command, aggregate Aggregate
 	})
 
 	for _, change := range changes {
-		backend.Dispatch(ctx, Topic(aggregate), change)
+		redis.Publish(ctx, Topic(aggregate), change)
 	}
 
 	aggregate.ClearUncommited()

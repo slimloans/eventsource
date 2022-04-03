@@ -1,7 +1,6 @@
 package eventsource
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -10,8 +9,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/slimloans/go/utils"
+	"github.com/slimloans/golly"
 	"github.com/slimloans/golly/errors"
-	"github.com/slimloans/golly/orm"
+	"github.com/slimloans/golly/plugins/orm"
 	"gorm.io/gorm"
 )
 
@@ -98,7 +98,7 @@ func eventFromData(data interface{}) Event {
 
 // ReplayEvents allows you to reply specific events
 // on an aggregate
-func ReplayEvents(ctx context.Context, aggregateID uuid.UUID, aggregateType string, events []Event) error {
+func ReplayEvents(ctx golly.Context, aggregateID uuid.UUID, aggregateType string, events []Event) error {
 	var aggregate Aggregate
 	if ag, found := aggregateRegistry[aggregateType]; found {
 		aggregate = reflect.New(reflect.TypeOf(ag)).Interface().(Aggregate)

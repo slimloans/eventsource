@@ -1,11 +1,10 @@
 package eventsource
 
 import (
-	"context"
-
 	"github.com/google/uuid"
 
-	"github.com/slimloans/golly/orm"
+	"github.com/slimloans/golly"
+	"github.com/slimloans/golly/plugins/orm"
 	"github.com/slimloans/golly/utils"
 	"gorm.io/gorm"
 )
@@ -54,7 +53,7 @@ func (ab *AggregateBase) NewRecord() bool {
 }
 
 // Apply increments the version of an aggregate and apply the change itself
-func (ab *AggregateBase) Apply(ctx context.Context, aggregate Aggregate, data interface{}, commit bool) {
+func (ab *AggregateBase) Apply(ctx golly.Context, aggregate Aggregate, data interface{}, commit bool) {
 	event := newEvent(aggregate, data)
 
 	// increments the version in event and aggregate
@@ -81,8 +80,8 @@ type DiffType map[string]interface{}
 
 type Aggregate interface {
 	// HandleCommand(slim.Context, Command) error
-	Apply(context.Context, Aggregate, interface{}, bool)
-	ApplyChange(context.Context, Event)
+	Apply(golly.Context, Aggregate, interface{}, bool)
+	ApplyChange(golly.Context, Event)
 
 	Type() string
 
