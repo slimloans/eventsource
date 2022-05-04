@@ -12,9 +12,10 @@ var (
 
 type RegistryOptions struct {
 	Aggregate Aggregate
-	Commands  []Command
-	Events    []EventData
-	Topics    []string
+
+	Commands []Command
+	Events   []EventData
+	Topics   []string
 }
 
 type RegistryItem struct {
@@ -23,7 +24,16 @@ type RegistryItem struct {
 	RegistryOptions
 }
 
-func findRegistryItem(ag Aggregate) *RegistryItem {
+func FindAggregateByName(name string) *RegistryItem {
+	for _, reg := range registry {
+		if reg.Name == name {
+			return &reg
+		}
+	}
+	return nil
+}
+
+func FindRegistryItem(ag Aggregate) *RegistryItem {
 	if ri, found := registry[reflect.TypeOf(ag)]; found {
 		return &ri
 	}
