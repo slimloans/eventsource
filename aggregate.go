@@ -1,25 +1,34 @@
 package eventsource
 
 import (
-	"github.com/google/uuid"
-
 	"github.com/slimloans/golly"
-	"github.com/slimloans/golly/plugins/orm"
-	"github.com/slimloans/golly/utils"
-	"gorm.io/gorm"
 )
+
+type Aggregate interface {
+	Repo(golly.Context) Repository
+
+	Apply(golly.Context, Event)
+
+	Type() string
+	Topic() string
+
+	IncrementVersion()
+
+	Changes() []Event
+	SetChanges([]Event)
+	ClearChanges()
+
+	GetVersion() uint
+
+	GetID() interface{}
+	SetID() interface{}
+}
 
 // AggregateBase holds the base aggregate for the db
 type AggregateBase struct {
-	orm.ModelUUID
-
 	Version uint `json:"version"`
 
 	changes []Event
-}
-
-func (ab *AggregateBase) BeforeCreate(db *gorm.DB) error {
-	return ab.ModelUUID.BeforeCreate(db)
 }
 
 func (ab *AggregateBase) IncrementVersion() {
@@ -27,77 +36,42 @@ func (ab *AggregateBase) IncrementVersion() {
 }
 
 // GetID return the aggregatebase id
-func (ab *AggregateBase) GetID() uuid.UUID {
-	return ab.ID
-}
-
-func (ab *AggregateBase) SetID(id uuid.UUID) {
-	ab.ID = id
-}
-
-// GetID return the aggregatebase id
 func (ab *AggregateBase) GetVersion() uint {
 	return ab.Version
 }
 
-func (ab *AggregateBase) Uncommited() []Event {
+func (ab *AggregateBase) Changes() []Event {
 	return ab.changes
 }
 
-func (ab *AggregateBase) ClearUncommited() {
+func (ab *AggregateBase) ClearChanges() {
 	ab.changes = []Event{}
 }
 
-func (ab *AggregateBase) NewRecord() bool {
-	return ab.GetID() == uuid.Nil
+func (ab *AggregateBase) SetChanges(events []Event) {
+	ab.changes = events
 }
 
-// Apply increments the version of an aggregate and apply the change itself
-func (ab *AggregateBase) Apply(ctx golly.Context, aggregate Aggregate, data interface{}, commit bool) {
-	event := newEvent(aggregate, data)
+func Apply(ctx golly.Context, aggregate Aggregate, edata interface{}) {
+	ApplyExt(ctx, aggregate, edata, nil, true)
+}
 
-	// increments the version in event and aggregate
-	ab.IncrementVersion()
-
-	// apply the event itself
-	aggregate.ApplyChange(ctx, event)
-
-	if commit {
-		event.Version = ab.Version
-		if event.Data != nil {
-			event.Type = utils.GetTypeWithPackage(event.Data)
-		}
-
-		if event.Metadata == nil {
-			event.Metadata = Metadata{}
-		}
-
-		ab.changes = append(ab.changes, event)
+func ApplyExt(ctx golly.Context, aggregate Aggregate, edata interface{}, meta Metadata, commit bool) {
+	if edata == nil {
+		return
 	}
-}
 
-type DiffType map[string]interface{}
+	event := NewEvent(edata)
+	event.Metadata.Merge(meta)
 
-type Aggregate interface {
-	// HandleCommand(slim.Context, Command) error
-	Apply(golly.Context, Aggregate, interface{}, bool)
-	ApplyChange(golly.Context, Event)
+	aggregate.IncrementVersion()
+	aggregate.Apply(ctx, event)
 
-	Type() string
+	if !commit {
+		return
+	}
 
-	IncrementVersion()
+	event.Version = aggregate.GetVersion()
 
-	Uncommited() []Event
-	ClearUncommited()
-
-	GetID() uuid.UUID
-	SetID(uuid.UUID)
-
-	GetVersion() uint
-
-	NewRecord() bool
-
-	Save(db *gorm.DB, original interface{}) error
-	Create(db *gorm.DB) error
-	Load(db *gorm.DB) error
+	aggregate.SetChanges(append(aggregate.Changes(), event))
 }

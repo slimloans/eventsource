@@ -1,135 +1,51 @@
 package eventsource
 
 import (
-	"net/http"
-	"reflect"
-	"strings"
-
-	"github.com/google/uuid"
 	"github.com/slimloans/golly"
 	"github.com/slimloans/golly/errors"
-	"github.com/slimloans/golly/plugins/redis"
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
-
-var (
-	ErrorConflict = errors.Error{
-		Key:    "ERROR.UPDATE_CONFLICT",
-		Status: http.StatusConflict,
-	}
-
-	ErrorNewRecord = errors.Error{
-		Key:    "ERROR.INVALID_RECORD",
-		Status: http.StatusNotFound,
-	}
-)
-
-type CommandRegistryType struct {
-	Command   Command
-	Aggregate interface{}
-}
-
-var aggregateRegistry = map[string]Aggregate{}
-
-type CommandInterfaces struct {
-	Command   reflect.Type
-	Aggregate reflect.Type
-}
 
 type Command interface {
-	Perform(golly.Context, *gorm.DB, Aggregate) error
-	Validate(Aggregate) error
+	Perform(golly.Context, Aggregate) error
+	Validate(golly.Context, Aggregate) error
 }
 
-// Call - call a command
-// TODO we will want to
-func Call(ctx golly.Context, db *gorm.DB, command Command, aggregate Aggregate, metadata Metadata) (Aggregate, Event, error) {
-	var event Event
-	var changes []Event
+func Call(ctx golly.Context, ag Aggregate, cmd Command, metadata Metadata) error {
+	repo := ag.Repo(ctx)
 
-	if err := command.Validate(aggregate); err != nil {
-		return aggregate, Event{}, errors.WrapGeneric(err)
+	if !repo.IsNewRecord(ag) {
+		if err := repo.Load(ctx, ag); err != nil {
+			return errors.WrapNotFound(err)
+		}
 	}
 
-	err := db.Transaction(func(tx *gorm.DB) error {
-		var newRecord = true
-		if aggregate.GetID() != uuid.Nil {
-			newRecord = false
-			if err := aggregate.Load(tx.Clauses(clause.Locking{Strength: "UPDATE"})); err != nil {
-				return errors.WrapGeneric(err)
-			}
+	if err := cmd.Validate(ctx, ag); err != nil {
+		return errors.WrapUnprocessable(err)
+	}
+
+	return repo.Transaction(func(repo Repository) error {
+		if err := cmd.Perform(ctx, ag); err != nil {
+			return errors.WrapUnprocessable(err)
 		}
 
-		originalVersion := aggregate.GetVersion()
-
-		var original interface{}
-
-		fieldVal := reflect.ValueOf(aggregate)
-		if fieldVal.Kind() == reflect.Ptr {
-			original = fieldVal.Elem().Interface()
-		} else {
-			original = fieldVal.Interface()
-		}
-
-		if err := command.Perform(ctx, tx, aggregate); err != nil {
-			return errors.WrapGeneric(err)
-		}
-
-		changes = aggregate.Uncommited()
+		changes := ag.Changes()
 		if len(changes) > 0 {
-			if newRecord {
-				if err := aggregate.Create(tx); err != nil {
-					return errors.WrapGeneric(err)
-				}
-			} else {
-				if err := aggregate.Save(tx, original); err != nil {
+			if err := repo.Save(ctx, ag); err != nil {
+				return errors.WrapUnprocessable(err)
+			}
+		}
+
+		for _, change := range changes {
+			change.AggregateID = ag.GetID()
+			change.AggregateType = ag.Type()
+			change.Metadata.Merge(metadata)
+
+			if eventrepo != nil {
+				if err := eventrepo.Save(ctx, &change); err != nil {
 					return errors.WrapGeneric(err)
 				}
 			}
-
-			for pos, change := range changes {
-				change.Version = uint(int(originalVersion) + (pos + 1))
-				change.AggregateID = aggregate.GetID()
-				change.Metadata = mergeMetaData(change.Metadata, metadata)
-
-				if eventDBToSave, err := change.Encode(); err != nil {
-					return errors.WrapGeneric(err)
-				} else if err = tx.Model(eventDBToSave).Create(&eventDBToSave).Error; err != nil {
-					return errors.WrapGeneric(err)
-				}
-
-				changes[pos] = change
-			}
-
 		}
 		return nil
 	})
-
-	for _, change := range changes {
-		redis.Publish(ctx, Topic(aggregate), change)
-	}
-
-	aggregate.ClearUncommited()
-
-	return aggregate, event, errors.WrapGeneric(err)
-}
-
-func mergeMetaData(m1, m2 Metadata) Metadata {
-	if m1 == nil {
-		m1 = Metadata{}
-	}
-
-	if m2 == nil {
-		m2 = Metadata{}
-	}
-
-	for k, v := range m2 {
-		m1[k] = v
-	}
-	return m1
-}
-
-func Topic(aggregate Aggregate) string {
-	return strings.ToLower("events." + aggregate.Type())
 }
