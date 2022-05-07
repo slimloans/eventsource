@@ -38,6 +38,7 @@ func Call(ctx golly.Context, ag Aggregate, cmd Command, metadata Metadata) error
 		for _, change := range changes {
 			change.AggregateID = ag.GetID()
 			change.AggregateType = ag.Type()
+
 			change.Metadata.Merge(metadata)
 
 			if eventrepo != nil {

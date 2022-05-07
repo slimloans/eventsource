@@ -14,8 +14,17 @@ type RegistryOptions struct {
 	Aggregate Aggregate
 
 	Commands []Command
-	Events   []EventData
+	Events   []interface{}
 	Topics   []string
+}
+
+func (ro RegistryOptions) FindCommand(name string) Command {
+	for _, cmd := range ro.Commands {
+		if utils.GetTypeWithPackage(cmd) == name {
+			return cmd
+		}
+	}
+	return nil
 }
 
 type RegistryItem struct {
@@ -24,7 +33,7 @@ type RegistryItem struct {
 	RegistryOptions
 }
 
-func FindAggregateByName(name string) *RegistryItem {
+func FindRegistryByAggregateName(name string) *RegistryItem {
 	for _, reg := range registry {
 		if reg.Name == name {
 			return &reg

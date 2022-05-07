@@ -15,8 +15,6 @@ func SetEventRepository(repo Repository) {
 	eventrepo = repo
 }
 
-type EventData interface{}
-
 type Metadata map[string]interface{}
 
 func (m1 Metadata) Merge(m2 Metadata) {
@@ -43,17 +41,17 @@ type Event struct {
 	AggregateID   interface{}
 	AggregateType string
 
-	Data EventData
+	Data interface{}
 
 	Metadata Metadata
 }
 
-func NewEvent(evtData EventData) Event {
+func NewEvent(evtData interface{}) Event {
 	id, _ := uuid.NewUUID()
+
 	return Event{
 		ID:        id,
 		Name:      utils.GetTypeWithPackage(evtData),
-		Version:   0,
 		Metadata:  Metadata{},
 		Data:      evtData,
 		CreatedAt: time.Now(),
