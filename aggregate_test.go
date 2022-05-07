@@ -13,7 +13,7 @@ func (*testAggregate) Type() string                    { return "test-aggregate"
 func (*testAggregate) Topic() string                   { return "test/topic" }
 func (*testAggregate) Apply(golly.Context, Event)      {}
 func (*testAggregate) GetID() string                   { return "" }
-func (*testAggregate) SetID(id string) string          { return id }
+func (*testAggregate) SetID(id string)                 {}
 
 type testRepostoryBase struct {
 	loadCalled       int
