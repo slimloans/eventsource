@@ -21,7 +21,7 @@ type Aggregate interface {
 	GetVersion() uint
 
 	GetID() string
-	SetID(string) string
+	SetID(string)
 }
 
 // AggregateBase holds the base aggregate for the db
