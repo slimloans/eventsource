@@ -8,12 +8,12 @@ type testAggregate struct {
 	repo Repository
 }
 
-func (a *testAggregate) Repo(golly.Context) Repository   { return a.repo }
-func (*testAggregate) Type() string                      { return "test-aggregate" }
-func (*testAggregate) Topic() string                     { return "test/topic" }
-func (*testAggregate) Apply(golly.Context, Event)        {}
-func (*testAggregate) GetID() interface{}                { return nil }
-func (*testAggregate) SetID(obj interface{}) interface{} { return obj }
+func (a *testAggregate) Repo(golly.Context) Repository { return a.repo }
+func (*testAggregate) Type() string                    { return "test-aggregate" }
+func (*testAggregate) Topic() string                   { return "test/topic" }
+func (*testAggregate) Apply(golly.Context, Event)      {}
+func (*testAggregate) GetID() string                   { return "" }
+func (*testAggregate) SetID(id string) string          { return id }
 
 type testRepostoryBase struct {
 	loadCalled       int
