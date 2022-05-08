@@ -23,7 +23,7 @@ func TestDTO(t *testing.T) {
 	})
 
 	t.Run("from the code", func(t *testing.T) {
-		command, aggregate, err := FromDTO(DTO{
+		command, aggregate, err := FromCommandDTO(CommandDTO{
 			Aggregate: AggregateReference{Name: "eventsource.testAggregate"},
 			Command:   "eventsource.TestCommandEmpty",
 			Data:      TestCommandEmpty{Test: true},
@@ -38,7 +38,7 @@ func TestDTO(t *testing.T) {
 	})
 
 	t.Run("from JSON", func(t *testing.T) {
-		var dto = DTO{}
+		var dto = CommandDTO{}
 		{
 			err := json.Unmarshal([]byte(`
 			{
@@ -50,7 +50,7 @@ func TestDTO(t *testing.T) {
 
 			assert.NoError(t, err)
 		}
-		command, aggregate, err := FromDTO(dto)
+		command, aggregate, err := FromCommandDTO(dto)
 
 		assert.NoError(t, err)
 

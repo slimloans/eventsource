@@ -12,7 +12,14 @@ type AggregateReference struct {
 	Name string `json:"name"`
 	ID   string `json:"id"`
 }
+
 type DTO struct {
+	Type    string   `json:"type"`
+	Event   *Event   `json:"event,omitempty"`
+	Command *Command `json:"command,omitempty"`
+}
+
+type CommandDTO struct {
 	Command string `json:"command"`
 
 	Aggregate AggregateReference `json:"aggregate"`
@@ -21,8 +28,8 @@ type DTO struct {
 	Metadata Metadata    `json:"metadata"`
 }
 
-// FromDTO create a new command and aggregate based on the looked up DTO
-func FromDTO(dto DTO) (Command, Aggregate, error) {
+// FromCommandDTO create a new command and aggregate based on the looked up DTO
+func FromCommandDTO(dto CommandDTO) (Command, Aggregate, error) {
 
 	reg := FindRegistryByAggregateName(dto.Aggregate.Name)
 

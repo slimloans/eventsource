@@ -8,6 +8,11 @@ import (
 	"github.com/slimloans/golly/utils"
 )
 
+const (
+	PUBLISH_TYPE_EVENT   = "event"
+	PUBLISH_TYPE_COMMAND = "command"
+)
+
 var (
 	eventBackend EventBackend
 )
@@ -15,7 +20,7 @@ var (
 type EventBackend interface {
 	Repository
 
-	Publish(golly.Context, string, Event)
+	Publish(golly.Context, string, DTO)
 }
 
 func SetEventRepository(backend EventBackend) {
@@ -39,26 +44,30 @@ func (m1 Metadata) Merge(m2 Metadata) {
 }
 
 type Event struct {
-	ID        uuid.UUID
-	CreatedAt time.Time
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"event_at"`
 
-	Name    string
-	Version uint
+	Event   string `json:"event"`
+	Version uint   `json:"version"`
 
-	AggregateID   interface{}
-	AggregateType string
+	AggregateID   string `json:"arggregate_id"`
+	AggregateType string `json:"aggregate_type"`
 
-	Data interface{}
+	Data     interface{} `json:"data"`
+	Metadata Metadata    `json:"metadata"`
+}
 
-	Metadata Metadata
+func (event Event) DTO() DTO {
+	return DTO{Type: PUBLISH_TYPE_EVENT, Event: &event}
 }
 
 func NewEvent(evtData interface{}) Event {
 	id, _ := uuid.NewUUID()
 
 	return Event{
-		ID:        id,
-		Name:      utils.GetTypeWithPackage(evtData),
+		ID: id,
+
+		Event:     utils.GetTypeWithPackage(evtData),
 		Metadata:  Metadata{},
 		Data:      evtData,
 		CreatedAt: time.Now(),
