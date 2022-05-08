@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/slimloans/golly"
 	"github.com/slimloans/golly/utils"
 )
 
@@ -14,7 +15,7 @@ var (
 type EventBackend interface {
 	Repository
 
-	Publish(topic string, event Event)
+	Publish(golly.Context, string, Event)
 }
 
 func SetEventRepository(backend EventBackend) {
