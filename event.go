@@ -8,11 +8,17 @@ import (
 )
 
 var (
-	eventrepo Repository
+	eventBackend EventBackend
 )
 
-func SetEventRepository(repo Repository) {
-	eventrepo = repo
+type EventBackend interface {
+	Repository
+
+	Publish(topic string, event Event)
+}
+
+func SetEventRepository(backend EventBackend) {
+	eventBackend = backend
 }
 
 type Metadata map[string]interface{}
