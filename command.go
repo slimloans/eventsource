@@ -43,10 +43,9 @@ func Call(ctx golly.Context, ag Aggregate, cmd Command, metadata Metadata) error
 			change.Metadata.Merge(metadata)
 
 			if eventBackend != nil {
-				dto := change.DTO()
-				ctx.Logger().Debugf("[publish: %s]  %#v", ag.Topic(), dto)
+				ctx.Logger().Debugf("[publish: %s]  %#v", ag.Topic(), change)
 
-				eventBackend.Publish(ctx, ag.Topic(), dto)
+				eventBackend.PublishEvent(ctx, ag, change)
 
 				if change.commit {
 					if err := eventBackend.Save(ctx, &change); err != nil {

@@ -8,11 +8,6 @@ import (
 	"github.com/slimloans/golly/utils"
 )
 
-const (
-	PUBLISH_TYPE_EVENT   = "event"
-	PUBLISH_TYPE_COMMAND = "command"
-)
-
 var (
 	eventBackend EventBackend
 )
@@ -20,7 +15,7 @@ var (
 type EventBackend interface {
 	Repository
 
-	Publish(golly.Context, string, DTO)
+	PublishEvent(golly.Context, Aggregate, Event)
 }
 
 func SetEventRepository(backend EventBackend) {
@@ -30,7 +25,7 @@ func SetEventRepository(backend EventBackend) {
 type Metadata map[string]interface{}
 
 func (m1 Metadata) Merge(m2 Metadata) {
-	if m2 == nil || len(m2) == 0 {
+	if len(m2) == 0 {
 		return
 	}
 
@@ -68,10 +63,6 @@ func (evts Events) HasCommited() bool {
 		}
 	}
 	return false
-}
-
-func (event Event) DTO() DTO {
-	return DTO{Type: PUBLISH_TYPE_EVENT, Event: &event}
 }
 
 func NewEvent(evtData interface{}) Event {

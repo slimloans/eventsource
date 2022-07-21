@@ -13,12 +13,6 @@ type AggregateReference struct {
 	ID   string `json:"id"`
 }
 
-type DTO struct {
-	Type    string   `json:"type"`
-	Event   *Event   `json:"event,omitempty"`
-	Command *Command `json:"command,omitempty"`
-}
-
 type CommandDTO struct {
 	Command string `json:"command"`
 
