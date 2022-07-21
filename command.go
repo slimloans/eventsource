@@ -29,7 +29,8 @@ func Call(ctx golly.Context, ag Aggregate, cmd Command, metadata Metadata) error
 		}
 
 		changes := ag.Changes()
-		if len(changes) > 0 {
+
+		if changes.HasCommited() {
 			if err := repo.Save(ctx, ag); err != nil {
 				return errors.WrapUnprocessable(err)
 			}
@@ -44,8 +45,10 @@ func Call(ctx golly.Context, ag Aggregate, cmd Command, metadata Metadata) error
 			if eventBackend != nil {
 				eventBackend.Publish(ctx, ag.Topic(), change.DTO())
 
-				if err := eventBackend.Save(ctx, &change); err != nil {
-					return errors.WrapGeneric(err)
+				if change.commit {
+					if err := eventBackend.Save(ctx, &change); err != nil {
+						return errors.WrapGeneric(err)
+					}
 				}
 			}
 		}

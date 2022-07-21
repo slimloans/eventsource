@@ -14,8 +14,8 @@ type Aggregate interface {
 
 	IncrementVersion()
 
-	Changes() []Event
-	SetChanges([]Event)
+	Changes() Events
+	Append(...Event)
 	ClearChanges()
 
 	GetVersion() uint
@@ -28,7 +28,7 @@ type Aggregate interface {
 type AggregateBase struct {
 	Version uint `json:"version"`
 
-	changes []Event
+	changes Events
 }
 
 func (ab *AggregateBase) IncrementVersion() {
@@ -40,7 +40,7 @@ func (ab *AggregateBase) GetVersion() uint {
 	return ab.Version
 }
 
-func (ab *AggregateBase) Changes() []Event {
+func (ab *AggregateBase) Changes() Events {
 	return ab.changes
 }
 
@@ -48,12 +48,16 @@ func (ab *AggregateBase) ClearChanges() {
 	ab.changes = []Event{}
 }
 
-func (ab *AggregateBase) SetChanges(events []Event) {
-	ab.changes = events
+func (ab *AggregateBase) Append(events ...Event) {
+	ab.changes = append(ab.changes, events...)
 }
 
 func Apply(ctx golly.Context, aggregate Aggregate, edata interface{}) {
 	ApplyExt(ctx, aggregate, edata, nil, true)
+}
+
+func NoCommit(ctx golly.Context, aggregate Aggregate, edata interface{}) {
+	ApplyExt(ctx, aggregate, edata, nil, false)
 }
 
 func ApplyExt(ctx golly.Context, aggregate Aggregate, edata interface{}, meta Metadata, commit bool) {
@@ -62,16 +66,16 @@ func ApplyExt(ctx golly.Context, aggregate Aggregate, edata interface{}, meta Me
 	}
 
 	event := NewEvent(edata)
+	event.commit = commit
 	event.Metadata.Merge(meta)
 
-	aggregate.IncrementVersion()
 	aggregate.Apply(ctx, event)
 
-	if !commit {
-		return
+	if commit {
+		aggregate.IncrementVersion()
 	}
 
 	event.Version = aggregate.GetVersion()
 
-	aggregate.SetChanges(append(aggregate.Changes(), event))
+	aggregate.Append(event)
 }

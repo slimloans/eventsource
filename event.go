@@ -53,8 +53,21 @@ type Event struct {
 	AggregateID   string `json:"arggregate_id"`
 	AggregateType string `json:"aggregate_type"`
 
-	Data     interface{} `json:"data"`
-	Metadata Metadata    `json:"metadata"`
+	Data     interface{} `json:"data" gorm:"-"`
+	Metadata Metadata    `json:"metadata" gorm:"-"`
+
+	commit bool
+}
+
+type Events []Event
+
+func (evts Events) HasCommited() bool {
+	for _, event := range evts {
+		if event.commit {
+			return true
+		}
+	}
+	return false
 }
 
 func (event Event) DTO() DTO {
